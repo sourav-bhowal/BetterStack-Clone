@@ -1,5 +1,5 @@
 {
-  "name": "Week-39-BetterStack-Project",
+  "name": "week-39-better-stack-project",
   "private": true,
   "scripts": {
     "build": "turbo run build",

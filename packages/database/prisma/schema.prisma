@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Website {
+  id        String   @id @default(uuid())
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  regions      Region[]      @relation("RegionWebsites")
+  websiteTicks WebsiteTick[]
+}
+
+model Region {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  websites     Website[]     @relation("RegionWebsites")
+  websiteTicks WebsiteTick[]
+}
+
+model WebsiteTick {
+  id           String        @id @default(uuid())
+  websiteId    String
+  regionId     String
+  responseTime Int
+  status       WebsiteStatus
+  errorMessage String?
+  responseBody String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  region  Region  @relation(fields: [regionId], references: [id], onDelete: Cascade)
+}
+
+enum WebsiteStatus {
+  UP
+  DOWN
+  UNKNOWN
+}
