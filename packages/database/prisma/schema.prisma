@@ -8,6 +8,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// User model represents the users of the application
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  websites Website[]
+}
+
+// Website model represents the websites being monitored
 model Website {
   id        String   @id @default(uuid())
   url       String
@@ -16,18 +28,23 @@ model Website {
 
   regions      Region[]      @relation("RegionWebsites")
   websiteTicks WebsiteTick[]
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// Region model represents geographical regions for website monitoring
 model Region {
   id        String   @id @default(uuid())
   name      String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   websites     Website[]     @relation("RegionWebsites")
   websiteTicks WebsiteTick[]
 }
 
+// WebsiteTick model represents the monitoring results for a website in a specific region
 model WebsiteTick {
   id           String        @id @default(uuid())
   websiteId    String
@@ -36,13 +53,14 @@ model WebsiteTick {
   status       WebsiteStatus
   errorMessage String?
   responseBody String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
   region  Region  @relation(fields: [regionId], references: [id], onDelete: Cascade)
 }
 
+// Enum for website status
 enum WebsiteStatus {
   UP
   DOWN
