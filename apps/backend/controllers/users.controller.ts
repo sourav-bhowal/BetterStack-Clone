@@ -14,6 +14,14 @@ export async function signUp(req: Request, res: Response) {
     });
   }
 
+  const existingUser = await prisma.user.findUnique({
+    where: { email: data.email },
+  });
+
+  if (existingUser) {
+    return res.status(400).json({ error: "Email already exists" });
+  }
+
   try {
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
