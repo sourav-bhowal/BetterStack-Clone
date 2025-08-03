@@ -33,7 +33,7 @@ export async function signUp(req: Request, res: Response) {
     });
 
     return res.status(201).json({
-      data: user,
+      data: user.id,
       message: "User created successfully",
     });
   } catch (error) {
@@ -68,7 +68,7 @@ export async function signIn(req: Request, res: Response) {
     }
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { id: user.id, email: user.email },
       process.env.JWT_SECRET!,
       {
         expiresIn: "24h",
