@@ -1,4 +1,4 @@
-import { xReadGroup, xAck } from "@repo/redis";
+import { xReadGroup, xAck, addToTickQueue } from "@repo/redis";
 import { prisma } from "@repo/database";
 import { parseWebsiteMessages } from "./utils/redis-parser.js";
 import axios from "axios";
@@ -23,7 +23,7 @@ async function processMessages() {
       data.length === 0 ||
       !Array.isArray(data[0][1])
     ) {
-      console.log("No website entries in stream, waiting...");
+      
       return;
     }
 
@@ -88,23 +88,23 @@ async function processMessages() {
       }
 
       try {
-        // Always save the result to database
-        await prisma.websiteTick.create({
-          data: {
-            websiteId: website.websiteId,
-            regionId: REGION_ID,
-            responseTime: responseTime,
-            status: status,
-            errorMessage: errorMessage,
-          },
+        // Add website tick data to Redis queue instead of direct DB save
+        await addToTickQueue({
+          websiteId: website.websiteId,
+          regionId: REGION_ID,
+          responseTime: responseTime,
+          status: status,
+          errorMessage: errorMessage,
         });
 
-        // Acknowledge the message after successful processing and DB save
+        console.log(`📤 Queued tick data for ${website.url}`);
+
+        // Acknowledge the message after successful queuing
         await xAck(REGION_ID, website.messageId);
-      } catch (dbError) {
+      } catch (queueError) {
         console.error(
-          `❌ Database error for ${website.url}:`,
-          dbError instanceof Error ? dbError.message : dbError
+          `❌ Queue error for ${website.url}:`,
+          queueError instanceof Error ? queueError.message : queueError
         );
 
         // Still acknowledge the message to prevent infinite reprocessing

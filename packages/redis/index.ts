@@ -61,3 +61,62 @@ export async function xAck(
   console.log("xAck result:", result);
   return result;
 }
+
+// =================== WEBSITE TICK QUEUE ===================
+
+const TICK_QUEUE_NAME = "betterstack:website-ticks";
+
+// Define the type for website tick data
+export type WebsiteTickData = {
+  websiteId: string;
+  regionId: string;
+  responseTime: number;
+  status: "UP" | "DOWN";
+  errorMessage?: string | null;
+  responseBody?: string | null;
+  timestamp?: number;
+};
+
+// Add website tick data to queue
+export async function addToTickQueue(tickData: WebsiteTickData): Promise<void> {
+  const dataWithTimestamp = {
+    ...tickData,
+    timestamp: tickData.timestamp || Date.now(),
+  };
+
+  await redis.lpush(TICK_QUEUE_NAME, JSON.stringify(dataWithTimestamp));
+}
+
+// Get batch of website ticks from queue (without removing them)
+export async function getTickBatch(batchSize: number = 50): Promise<WebsiteTickData[]> {
+  const items = await redis.lrange(TICK_QUEUE_NAME, -batchSize, -1);
+  return items.map(item => JSON.parse(item) as WebsiteTickData);
+}
+
+// Remove processed items from queue after successful database insertion
+export async function removeProcessedTicks(count: number): Promise<void> {
+  if (count > 0) {
+    await redis.ltrim(TICK_QUEUE_NAME, 0, -(count + 1));
+  }
+}
+
+// Get and remove batch atomically (original behavior if needed)
+export async function popTickBatch(batchSize: number = 50): Promise<WebsiteTickData[]> {
+  const items = await redis.lrange(TICK_QUEUE_NAME, -batchSize, -1);
+  
+  if (items.length > 0) {
+    await redis.ltrim(TICK_QUEUE_NAME, 0, -(items.length + 1));
+  }
+
+  return items.map(item => JSON.parse(item) as WebsiteTickData);
+}
+
+// Get queue length
+export async function getTickQueueLength(): Promise<number> {
+  return await redis.llen(TICK_QUEUE_NAME);
+}
+
+// Clear the tick queue (useful for debugging)
+export async function clearTickQueue(): Promise<void> {
+  await redis.del(TICK_QUEUE_NAME);
+}
