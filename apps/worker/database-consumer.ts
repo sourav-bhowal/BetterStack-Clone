@@ -1,4 +1,9 @@
-import { getTickBatch, getTickQueueLength, removeProcessedTicks, WebsiteTickData } from "@repo/redis";
+import {
+  getTickBatch,
+  getTickQueueLength,
+  removeProcessedTicks,
+  WebsiteTickData,
+} from "@repo/redis";
 import { prisma } from "@repo/database";
 
 const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || "50");
@@ -32,7 +37,9 @@ class DatabaseConsumer {
         return;
       }
 
-      console.log(`📊 Queue length: ${this.stats.queueLength}, fetching batch of ${BATCH_SIZE}...`);
+      console.log(
+        `📊 Queue length: ${this.stats.queueLength}, fetching batch of ${BATCH_SIZE}...`
+      );
 
       // Get batch of tick data from Redis queue (without removing them yet)
       const tickBatch = await getTickBatch(BATCH_SIZE);
@@ -43,7 +50,9 @@ class DatabaseConsumer {
       }
 
       this.stats.lastBatchSize = tickBatch.length;
-      console.log(`📦 Processing batch of ${tickBatch.length} website ticks...`);
+      console.log(
+        `📦 Processing batch of ${tickBatch.length} website ticks...`
+      );
 
       // Bulk insert to database
       await this.bulkInsertTicks(tickBatch);
@@ -54,15 +63,16 @@ class DatabaseConsumer {
 
       this.stats.processed += tickBatch.length;
       this.stats.lastProcessedAt = new Date();
-      
-      console.log(`✅ Successfully processed ${tickBatch.length} ticks. Total processed: ${this.stats.processed}`);
 
+      console.log(
+        `✅ Successfully processed ${tickBatch.length} ticks. Total processed: ${this.stats.processed}`
+      );
     } catch (error) {
       this.stats.failed++;
       console.error("❌ Error processing batch:", error);
-      
+
       // Wait longer on error to prevent spam
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      await new Promise((resolve) => setTimeout(resolve, 10000));
     }
   }
 
@@ -71,7 +81,7 @@ class DatabaseConsumer {
 
     try {
       // Transform tick data for Prisma
-      const prismaData = tickBatch.map(tick => ({
+      const prismaData = tickBatch.map((tick) => ({
         websiteId: tick.websiteId,
         regionId: tick.regionId,
         responseTime: tick.responseTime,
@@ -89,41 +99,10 @@ class DatabaseConsumer {
 
       const duration = Date.now() - startTime;
       console.log(`💾 Bulk inserted ${result.count} records in ${duration}ms`);
-
     } catch (error) {
       console.error("❌ Bulk insert failed:", error);
-      
-      // On failure, try individual inserts to save what we can
-      await this.fallbackIndividualInserts(tickBatch);
+      this.stats.failed++;
     }
-  }
-
-  private async fallbackIndividualInserts(tickBatch: WebsiteTickData[]): Promise<void> {
-    console.log("🔄 Attempting individual inserts as fallback...");
-    let successCount = 0;
-    let failureCount = 0;
-
-    for (const tick of tickBatch) {
-      try {
-        await prisma.websiteTick.create({
-          data: {
-            websiteId: tick.websiteId,
-            regionId: tick.regionId,
-            responseTime: tick.responseTime,
-            status: tick.status,
-            errorMessage: tick.errorMessage,
-            responseBody: tick.responseBody,
-            createdAt: tick.timestamp ? new Date(tick.timestamp) : new Date(),
-          },
-        });
-        successCount++;
-      } catch (error) {
-        failureCount++;
-        console.error(`❌ Failed to insert tick for website ${tick.websiteId}:`, error);
-      }
-    }
-
-    console.log(`📊 Fallback complete: ${successCount} success, ${failureCount} failed`);
   }
 
   getStats(): BatchStats {
@@ -160,28 +139,27 @@ async function main() {
   while (true) {
     try {
       await consumer.processBatch();
-      
+
       // Wait for the specified interval before next batch
-      await new Promise(resolve => setTimeout(resolve, BATCH_INTERVAL));
-      
+      await new Promise((resolve) => setTimeout(resolve, BATCH_INTERVAL));
     } catch (error) {
       console.error("Consumer loop error:", error);
-      
+
       // Wait longer on error
-      await new Promise(resolve => setTimeout(resolve, 15000));
+      await new Promise((resolve) => setTimeout(resolve, 15000));
     }
   }
 }
 
 // Handle graceful shutdown
-process.on('SIGINT', () => {
-  console.log('\n🛑 Received SIGINT, shutting down gracefully...');
+process.on("SIGINT", () => {
+  console.log("\n🛑 Received SIGINT, shutting down gracefully...");
   consumer.printStats();
   process.exit(0);
 });
 
-process.on('SIGTERM', () => {
-  console.log('\n🛑 Received SIGTERM, shutting down gracefully...');
+process.on("SIGTERM", () => {
+  console.log("\n🛑 Received SIGTERM, shutting down gracefully...");
   consumer.printStats();
   process.exit(0);
 });

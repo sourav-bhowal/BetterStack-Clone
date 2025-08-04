@@ -88,9 +88,11 @@ export async function addToTickQueue(tickData: WebsiteTickData): Promise<void> {
 }
 
 // Get batch of website ticks from queue (without removing them)
-export async function getTickBatch(batchSize: number = 50): Promise<WebsiteTickData[]> {
+export async function getTickBatch(
+  batchSize: number = 50
+): Promise<WebsiteTickData[]> {
   const items = await redis.lrange(TICK_QUEUE_NAME, -batchSize, -1);
-  return items.map(item => JSON.parse(item) as WebsiteTickData);
+  return items.map((item) => JSON.parse(item) as WebsiteTickData);
 }
 
 // Remove processed items from queue after successful database insertion
@@ -100,23 +102,7 @@ export async function removeProcessedTicks(count: number): Promise<void> {
   }
 }
 
-// Get and remove batch atomically (original behavior if needed)
-export async function popTickBatch(batchSize: number = 50): Promise<WebsiteTickData[]> {
-  const items = await redis.lrange(TICK_QUEUE_NAME, -batchSize, -1);
-  
-  if (items.length > 0) {
-    await redis.ltrim(TICK_QUEUE_NAME, 0, -(items.length + 1));
-  }
-
-  return items.map(item => JSON.parse(item) as WebsiteTickData);
-}
-
 // Get queue length
 export async function getTickQueueLength(): Promise<number> {
   return await redis.llen(TICK_QUEUE_NAME);
-}
-
-// Clear the tick queue (useful for debugging)
-export async function clearTickQueue(): Promise<void> {
-  await redis.del(TICK_QUEUE_NAME);
 }
