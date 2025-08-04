@@ -1,5 +1,4 @@
 import { xReadGroup, xAck, addToTickQueue } from "@repo/redis";
-import { prisma } from "@repo/database";
 import { parseWebsiteMessages } from "./utils/redis-parser.js";
 import axios from "axios";
 
@@ -23,7 +22,6 @@ async function processMessages() {
       data.length === 0 ||
       !Array.isArray(data[0][1])
     ) {
-      
       return;
     }
 
