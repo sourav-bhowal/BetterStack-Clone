@@ -13,10 +13,19 @@ export async function createWebsite(req: Request, res: Response) {
   }
 
   try {
+    const regions = await prisma.region.findMany();
+
+    if (regions.length === 0) {
+      return res.status(409).json({ error: "No regions available" });
+    }
+
     const website = await prisma.website.create({
       data: {
         url: data.url,
         userId: req.user.id,
+        regions: {
+          connect: regions.map((region) => ({ id: region.id })),
+        },
       },
     });
 
