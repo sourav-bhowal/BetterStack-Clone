@@ -11,6 +11,11 @@ if (!REGION_ID || !WORKER_ID) {
   );
 }
 
+/**
+ * Worker script to process website monitoring messages from Redis streams.
+ * It reads messages, checks website status, and queues tick data for database insertion.
+ */
+
 async function processMessages() {
   try {
     // Read messages from the "websites" stream for the specified region and worker

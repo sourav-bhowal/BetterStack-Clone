@@ -18,6 +18,11 @@ interface BatchStats {
   lastProcessedAt: Date;
 }
 
+/**
+ * Database consumer to process website tick data from Redis queue.
+ * It fetches batches of tick data, inserts them into the database,
+ * and handles errors gracefully.
+ */
 class DatabaseConsumer {
   private stats: BatchStats = {
     processed: 0,
